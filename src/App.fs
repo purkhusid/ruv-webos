@@ -18,16 +18,18 @@ type Category =
       title: string
       programs: DeferredCategoryPrograms }
 
-type DeferredCategories = DeferredResult<Category list>
+type DeferredCategories = DeferredResult<Map<string, Category>>
 
 type State =
-    { Categories: DeferredCategories }
+    { categories: DeferredCategories }
 
-type Msg = LoadCategories of AsyncOperationStatus<Result<Category list, string>>
+type Msg =
+    | LoadCategories of AsyncOperationStatus<Result<Category list, string>>
+    | LoadedCategoryPrograms of string * Result<Program list, string>
 
-let init() = { Categories = HasNotStartedYet }, Cmd.ofMsg (LoadCategories Started)
+let init() = { categories = HasNotStartedYet }, Cmd.ofMsg (LoadCategories Started)
 
-let startLoading (state: State) = { state with Categories = InProgress }
+let startLoading (state: State) = { state with categories = InProgress }
 
 let loadCategories =
     async {
@@ -37,20 +39,30 @@ let loadCategories =
             let categories =
                 categoryList.Category.categories
                 |> List.map (fun c ->
-                    { slug = c.slug
-                      title = c.title
+                    // TODO: Don't use .value!
+                    { slug = c.slug |> Option.defaultValue ""
+                      title = c.title |> Option.defaultValue ""
                       programs = HasNotStartedYet })
             return LoadCategories(Finished(Ok categories))
 
         | Error(error) -> return LoadCategories(Finished(Error error))
     }
 
-// let loadCategory categorySlug = async {
-//         let! categoryPrograms = Api.categoryPrograms categorySlug
-//         match categoryPrograms with
-//         | Ok(category) ->
-//             return
-//     }
+let loadCategoryPrograms categorySlug =
+    async {
+        match! (Api.categoryPrograms categorySlug) with
+        | Ok(programs) ->
+            let categoryPrograms =
+                programs
+                |> List.map (fun p ->
+                    { id = p.id
+                      title = p.title |> Option.defaultValue ""
+                      description = p.description |> Option.defaultValue ""
+                      slug = p.slug |> Option.defaultValue ""
+                      image = p.image |> Option.defaultValue "" })
+            return LoadedCategoryPrograms((categorySlug, Ok categoryPrograms))
+        | Error(error) -> return LoadedCategoryPrograms((categorySlug, Error error))
+    }
 
 let update (msg: Msg) (state: State) =
     match msg with
@@ -60,15 +72,38 @@ let update (msg: Msg) (state: State) =
         nextState, nextCmd
 
     | LoadCategories(Finished(Ok(categories))) ->
-        let nextState = { state with Categories = Resolved(Ok categories) }
+        let categoryMap =
+            [ for c in categories -> c.slug, c ]
+            |> Map.ofSeq
+
+        let nextState = { state with categories = Resolved(Ok categoryMap) }
         let categorySlugs = categories |> List.map (fun c -> c.slug)
-        // Replace Cmd.none with fetching of each program
-        // nextState, Cmd.batch[ for category in categorySlugs]
-        nextState, Cmd.none
+        nextState,
+        Cmd.batch [ for category in categorySlugs -> Cmd.fromAsync (loadCategoryPrograms category) ]
 
     | LoadCategories(Finished(Error(error))) ->
-        let nextState = { state with Categories = Resolved(Error error) }
+        let nextState = { state with categories = Resolved(Error error) }
         nextState, Cmd.none
+
+    | LoadedCategoryPrograms(category, Ok(programs)) ->
+        match state.categories with
+        | Resolved(Ok categories) ->
+            let oldCategory = categories.[category]
+            let newCategory = { oldCategory with programs = Resolved(Ok programs) }
+
+            let modifiedCategoriesMap =
+                categories
+                |> Map.remove category
+                |> Map.add category newCategory
+
+            let nextState = { state with categories = Resolved(Ok modifiedCategoriesMap) }
+            nextState, Cmd.none
+        | _ -> state, Cmd.none
+
+    | LoadedCategoryPrograms(category, Error(error)) ->
+        let nextState = { state with categories = Resolved(Error error) }
+        nextState, Cmd.none
+
 
 
 let renderError (errorMsg: string) =
@@ -83,11 +118,25 @@ let spinner =
               style.marginTop 20 ]
           prop.children [ Html.i [ prop.className "fa fa-cog fa-spin fa-2x" ] ] ]
 
+let renderCategoryPrograms (programs: DeferredCategoryPrograms) =
+    let renderedPrograms =
+        match programs with
+        | HasNotStartedYet -> [ Html.none ]
+        | InProgress -> [ spinner ]
+        | Resolved(Ok programs) ->
+            [ for p in programs -> Html.h2 [ prop.text p.title ] ]
+        | Resolved(Error error) -> [ renderError error ]
+
+    Html.div [ prop.children renderedPrograms ]
 
 let renderCategoryContent (category: Category) =
-    Html.h1
-        [ prop.className "title"
-          prop.text category.title ]
+    Html.div
+        [ prop.children
+            [ Html.h1
+                [ prop.className "title"
+                  prop.text category.title ]
+              renderCategoryPrograms category.programs ] ]
+
 
 let renderCategory category =
     Html.div
@@ -105,7 +154,8 @@ let renderCategories (categories: DeferredCategories) =
     | Resolved(Error errorMsg) -> renderError errorMsg
     | Resolved(Ok categories) ->
         categories
-        |> List.map (renderCategory)
+        |> Map.toList
+        |> List.map (fun (slug, category) -> renderCategory category)
         |> Html.div
 
 let title =
@@ -118,7 +168,7 @@ let render (state: State) (dispatch: Msg -> unit) =
         [ prop.style
             [ style.padding 20
               style.backgroundColor "#202020" ]
-          prop.children [ renderCategories state.Categories ] ]
+          prop.children [ renderCategories state.categories ] ]
 
 #if DEBUG
 open Elmish.HMR

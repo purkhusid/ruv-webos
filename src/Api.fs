@@ -17,14 +17,14 @@ type GraphQLResponse<'t> =
 
 type Program =
     { id: int
-      title: string
-      description: string
-      slug: string
-      image: string }
+      title: Option<string>
+      description: Option<string>
+      slug: Option<string>
+      image: Option<string> }
 
 type Category =
-    { slug: string
-      title: string
+    { slug: Option<string>
+      title: Option<string>
       programs: Option<Program list> }
 
 type CategoryList =
@@ -75,7 +75,8 @@ let categoriesQuery() =
 
 
 let categoryPrograms category =
-    let queryString = """{
+    async {
+        let queryString = """query getCategoryPrograms($category: String!) {
             Category(station: tv, category: $category) {
                 categories {
                     programs {
@@ -88,13 +89,23 @@ let categoryPrograms category =
                 }
             }
         }"""
-    let variables = Map.empty
+        let variables = Map.empty
 
-    let query =
-        { operationName = null
-          query = queryString
-          variables = variables.Add("category", category) }
-    executeQuery query categoryListDecoder
+        let query =
+            { operationName = null
+              query = queryString
+              variables = variables.Add("category", category) }
+        let! categoryList = executeQuery query categoryListDecoder
+        match categoryList with
+        | Ok(categoryList) ->
+            if categoryList.Category.categories.Length <> 1 then
+                return Error("Query for category programs did not return a single category")
+            else
+                match categoryList.Category.categories.[0].programs with
+                | Some(programs) -> return Ok(programs)
+                | None -> return Error("Category programs was null")
+        | Error(error) -> return Error(error)
+    }
 
 let program programId =
     let queryString = """{
