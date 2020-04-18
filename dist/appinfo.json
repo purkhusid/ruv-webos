@@ -1,0 +1,10 @@
+{
+  "id": "com.github.purkhusid.ruv-webos",
+  "version": "0.0.1",
+  "vendor": "My Company",
+  "type": "web",
+  "main": "index.html",
+  "title": "RÚV webOS",
+  "icon": "ruv-logo.svg",
+  "largeIcon": "ruv-logo.svg"
+}

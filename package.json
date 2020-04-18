@@ -5,12 +5,12 @@
         "build": "webpack --mode production"
     },
     "dependencies": {
+        "graphql": "^15.0.0",
         "react": "16.13.1",
         "react-dom": "16.13.1"
     },
     "devDependencies": {
         "@babel/core": "7.9.0",
-        "apollo": "2.27.0",
         "fable-compiler": "2.8.0",
         "fable-loader": "2.1.9",
         "webpack": "4.42.1",
