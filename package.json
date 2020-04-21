@@ -5,17 +5,22 @@
         "build": "webpack --mode production"
     },
     "dependencies": {
-        "graphql": "^15.0.0",
+        "graphql": "15.0.0",
+        "pure-react-carousel": "1.27.0",
         "react": "16.13.1",
         "react-dom": "16.13.1"
     },
     "devDependencies": {
+        "file-loader": "6.0.0",
         "@babel/core": "7.9.0",
+        "css-loader": "3.5.2",
         "fable-compiler": "2.8.0",
         "fable-loader": "2.1.9",
+        "style-loader": "1.1.4",
         "webpack": "4.42.1",
         "webpack-cli": "3.3.11",
-        "webpack-dev-server": "3.10.3"
+        "webpack-dev-server": "3.10.3",
+        "url-loader": "4.1.0"
     },
     "version": "0.0.0"
 }

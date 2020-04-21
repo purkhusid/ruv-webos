@@ -28,7 +28,34 @@ module.exports = (env, argv) => {
                         define: mode === "development" ? ["DEVELOPMENT"] : []
                     }
                 }
-            }]
+            },
+            {
+                test: /\.css$/,
+                use: [
+                    'style-loader',
+                    'css-loader'
+                ]
+            },
+            {
+                test: /\.(svg|otf)$/,
+                loader: 'file-loader?limit=10000&name=assets/images/[name].[ext]',
+            },
+            {
+                test: /\.(png|gif)$/,
+                use: [
+                    {
+                        loader: 'url-loader',
+                        options: {
+                            limit: 10000,
+                            name: 'assets/images/[name].[ext]'
+                        }
+                    }
+                ]
+            },
+            {
+                test: /\.(eot|ttf|woff|woff2)$/,
+                loader: 'file-loader?limit=10000&name=assets/fonts/[name].[ext]',
+            },]
         }
     }
 }

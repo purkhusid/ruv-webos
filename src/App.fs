@@ -3,6 +3,11 @@ module App
 open Elmish
 open Elmish.React
 open Feliz
+open Feliz.PureReactCarousel
+open Fable.Core.JsInterop
+
+importSideEffects "pure-react-carousel/dist/react-carousel.es.css"
+importSideEffects "./styles.css"
 
 type Program =
     { id: int
@@ -105,18 +110,27 @@ let update (msg: Msg) (state: State) =
         nextState, Cmd.none
 
 
-
 let renderError (errorMsg: string) =
-    Html.h1
-        [ prop.style [ style.color.red ]
-          prop.text errorMsg ]
+    Html.h1 [ 
+        prop.style [ 
+            style.color.red 
+        ]
+        prop.text errorMsg 
+   ]
 
 let spinner =
-    Html.div
-        [ prop.style
-            [ style.textAlign.center
-              style.marginTop 20 ]
-          prop.children [ Html.i [ prop.className "fa fa-cog fa-spin fa-2x" ] ] ]
+    Html.div [ 
+        prop.style [ 
+            style.textAlign.center
+            style.marginTop 20 
+        ]
+        prop.children [ 
+            Html.i [ 
+                prop.className "fa fa-cog fa-spin fa-2x"
+            ] 
+        ] 
+    ]
+
 
 let renderCategoryPrograms (programs: DeferredCategoryPrograms) =
     let renderedPrograms =
@@ -127,24 +141,98 @@ let renderCategoryPrograms (programs: DeferredCategoryPrograms) =
             [ for p in programs -> Html.h2 [ prop.text p.title ] ]
         | Resolved(Error error) -> [ renderError error ]
 
-    Html.div [ prop.children renderedPrograms ]
+    Html.div [ 
+        prop.children renderedPrograms 
+    ]
+
+let renderSlide program index =
+    PureReactCarousel.slide [ 
+        slide.index index
+        slide.children [ 
+             Html.div [
+                prop.children [
+                    Html.img [
+                        prop.src program.image
+                        prop.width 399
+                        prop.height 225
+                    ]
+                ]
+            ]
+        ] 
+    ]
+
+
+let renderCategoryCarousel (programs: Program list) =
+    let slideCount = programs.Length
+    let visibleSlides = if slideCount >= 3 then 3 else slideCount
+    let slides = 
+        programs
+        |> List.indexed 
+        |> List.map (fun (i, p) -> renderSlide p i)
+
+    Html.div [ 
+        prop.children [ 
+            PureReactCarousel.carouselProvider [ 
+                carouselProvider.isIntrinsicHeight true
+                carouselProvider.naturalSlideWidth 399
+                carouselProvider.naturalSlideHeight 225
+                carouselProvider.totalSlides slideCount
+                carouselProvider.visibleSlides visibleSlides
+                carouselProvider.children [ 
+                    Html.div [
+                        prop.className "container"
+                        prop.children [
+
+                            PureReactCarousel.slider [
+                                slider.children [
+                                    Html.div [
+                                        prop.children slides
+                                    ]                                
+                                ] 
+                            ]
+
+                            PureReactCarousel.buttonBack [ 
+                                prop.className "buttonBack"
+                                buttonBack.children [
+                                    Html.text "Back"
+                                ] 
+                            ]
+
+                            PureReactCarousel.buttonNext [ 
+                                prop.className "buttonNext"
+                                buttonNext.children [ 
+                                    Html.text "Next"
+                                ] 
+                            ] 
+                            
+                        ]                    
+                    ]
+                ] 
+            ] 
+        ] 
+    ]
 
 let renderCategoryContent (category: Category) =
-    Html.div
-        [ prop.children
-            [ Html.h1
-                [ prop.className "title"
-                  prop.text category.title ]
-              renderCategoryPrograms category.programs ] ]
+    let programs =
+        match category.programs with
+        | HasNotStartedYet -> Html.none
+        | InProgress -> spinner
+        | Resolved(Ok programs) ->
+            renderCategoryCarousel programs
+        | Resolved(Error error) -> renderError error
 
-
-let renderCategory category =
-    Html.div
-        [ prop.className "box"
-          prop.style
-              [ style.marginTop 15
-                style.marginBottom 15 ]
-          prop.children [ renderCategoryContent category ] ]
+    Html.div [ 
+        prop.children [ 
+            Html.h1 [ 
+                prop.className "title"
+                prop.text category.title
+                prop.style [
+                    style.color "#FFF"
+                ]
+            ]
+            programs 
+        ] 
+    ]
 
 
 let renderCategories (categories: DeferredCategories) =
@@ -155,20 +243,19 @@ let renderCategories (categories: DeferredCategories) =
     | Resolved(Ok categories) ->
         categories
         |> Map.toList
-        |> List.map (fun (slug, category) -> renderCategory category)
+        |> List.map (fun (slug, category) -> renderCategoryContent category)
         |> Html.div
 
-let title =
-    Html.h1
-        [ prop.className "title"
-          prop.text "Whoot" ]
-
 let render (state: State) (dispatch: Msg -> unit) =
-    Html.div
-        [ prop.style
-            [ style.padding 20
-              style.backgroundColor "#202020" ]
-          prop.children [ renderCategories state.categories ] ]
+    Html.div [ 
+        prop.style [ 
+            style.padding 20
+            style.backgroundColor "#202020" 
+        ]
+        prop.children [ 
+            renderCategories state.categories 
+        ] 
+    ]
 
 #if DEBUG
 open Elmish.HMR
