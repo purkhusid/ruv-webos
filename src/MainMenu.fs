@@ -5,9 +5,18 @@ open Elmish.React
 open Feliz
 open Feliz.PureReactCarousel
 open Fable.Core.JsInterop
+open Feliz.Router
 
 importSideEffects "pure-react-carousel/dist/react-carousel.es.css"
 importSideEffects "./styles.css"
+
+[<RequireQualifiedAccess>]
+type Url =
+    | Index
+
+let parseUrl (url: string list) =
+    match url with
+    | _ -> Url.Index
 
 type Program =
     { id: int
@@ -31,6 +40,7 @@ type State =
 type Msg =
     | LoadCategories of AsyncOperationStatus<Result<Category list, string>>
     | LoadedCategoryPrograms of string * Result<Program list, string>
+    | NavigateToProgram of int
 
 let init() = { categories = HasNotStartedYet }, Cmd.ofMsg (LoadCategories Started)
 
@@ -108,6 +118,7 @@ let update (msg: Msg) (state: State) =
     | LoadedCategoryPrograms(category, Error(error)) ->
         let nextState = { state with categories = Resolved(Error error) }
         nextState, Cmd.none
+    | NavigateToProgram programId -> state, Router.navigate(sprintf "/program/%i"  programId)
 
 
 let renderError (errorMsg: string) =
@@ -145,7 +156,7 @@ let renderCategoryPrograms (programs: DeferredCategoryPrograms) =
         prop.children renderedPrograms 
     ]
 
-let renderSlide program index =
+let renderSlide program index dispatch =
     PureReactCarousel.slide [ 
         slide.index index
         slide.children [ 
@@ -155,6 +166,7 @@ let renderSlide program index =
                         prop.src program.image
                         prop.width 399
                         prop.height 225
+                        prop.onClick(fun _ -> dispatch (NavigateToProgram program.id))
                     ]
                 ]
             ]
@@ -162,13 +174,13 @@ let renderSlide program index =
     ]
 
 
-let renderCategoryCarousel (programs: Program list) =
+let renderCategoryCarousel (programs: Program list) dispatch =
     let slideCount = programs.Length
     let visibleSlides = if slideCount >= 3 then 3 else slideCount
     let slides = 
         programs
         |> List.indexed 
-        |> List.map (fun (i, p) -> renderSlide p i)
+        |> List.map (fun (i, p) -> renderSlide p i dispatch)
 
     Html.div [ 
         prop.children [ 
@@ -212,13 +224,13 @@ let renderCategoryCarousel (programs: Program list) =
         ] 
     ]
 
-let renderCategoryContent (category: Category) =
+let renderCategoryContent (category: Category) dispatch =
     let programs =
         match category.programs with
         | HasNotStartedYet -> Html.none
         | InProgress -> spinner
         | Resolved(Ok programs) ->
-            renderCategoryCarousel programs
+            renderCategoryCarousel programs dispatch
         | Resolved(Error error) -> renderError error
 
     Html.div [ 
@@ -235,7 +247,7 @@ let renderCategoryContent (category: Category) =
     ]
 
 
-let renderCategories (categories: DeferredCategories) =
+let renderCategories (categories: DeferredCategories) dispatch=
     match categories with
     | HasNotStartedYet -> Html.none
     | InProgress -> spinner
@@ -243,16 +255,12 @@ let renderCategories (categories: DeferredCategories) =
     | Resolved(Ok categories) ->
         categories
         |> Map.toList
-        |> List.map (fun (slug, category) -> renderCategoryContent category)
+        |> List.map (fun (slug, category) -> renderCategoryContent category dispatch)
         |> Html.div
 
 let render (state: State) (dispatch: Msg -> unit) =
     Html.div [ 
-        prop.style [ 
-            style.padding 20
-            style.backgroundColor "#202020" 
-        ]
         prop.children [ 
-            renderCategories state.categories 
+            renderCategories state.categories dispatch
         ] 
     ]

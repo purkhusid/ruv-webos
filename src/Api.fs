@@ -10,17 +10,40 @@ let apiUrl = "https://graphqladdi.spilari.ruv.is"
 type GraphQLQuery =
     { operationName: string
       query: string
-      variables: Map<string, string> }
+      variables: obj }
 
 type GraphQLResponse<'t> =
     { data: 't }
 
+type Subtitles = 
+    { name: string
+      value: Option<string> }
+
+type Episode =
+    { id: string 
+      title: Option<string> 
+      description: Option<string>
+      firstrun: Option<string>
+      scope: Option<string>
+      rating: Option<int>
+      file_expires: Option<string>
+      file: Option<string> 
+      image: Option<string>
+      subtitles: Option<Subtitles list> }
+
 type Program =
     { id: int
       title: Option<string>
+      foreign_title: Option<string>
       description: Option<string>
       slug: Option<string>
-      image: Option<string> }
+      image: Option<string>
+      portrait_image: Option<string> 
+      firstrun: Option<string> 
+      episodes: Option<Episode list> }
+
+type ProgramContainer =
+    { Program: Program }  
 
 type Category =
     { slug: Option<string>
@@ -33,9 +56,10 @@ type CategoryList =
 type Categories =
     { Category: CategoryList }
 
-let inline categoryListDecoder json = Decode.Auto.fromString<GraphQLResponse<Categories>> json
+let inline categoriesDecoder json = Decode.Auto.fromString<GraphQLResponse<Categories>> json
+let inline programContainerDecoder json = Decode.Auto.fromString<GraphQLResponse<ProgramContainer>> json
 
-let inline executeQuery<'t> query decoder =
+let inline executeQuery<'t> query (decoder: string -> Result<GraphQLResponse<'t>, string>) =
     async {
         let body = Encode.Auto.toString (4, query)
         let! response = Http.request apiUrl
@@ -71,7 +95,7 @@ let categoriesQuery() =
         { operationName = null
           query = queryString
           variables = Map.empty }
-    executeQuery<CategoryList> query categoryListDecoder
+    executeQuery query categoriesDecoder
 
 
 let categoryPrograms category =
@@ -94,8 +118,8 @@ let categoryPrograms category =
         let query =
             { operationName = null
               query = queryString
-              variables = variables.Add("category", category) }
-        let! categoryList = executeQuery query categoryListDecoder
+              variables = {|category = category |} }
+        let! categoryList = executeQuery query categoriesDecoder
         match categoryList with
         | Ok(categoryList) ->
             if categoryList.Category.categories.Length <> 1 then
@@ -107,49 +131,55 @@ let categoryPrograms category =
         | Error(error) -> return Error(error)
     }
 
-let program programId =
-    let queryString = """{
-            Program(id: $programId) {
-                slug
-                title
-                description
-                foreign_title
-                id
-                image
-                portrait_image
-                episodes(limit: 1) {
+let program (programId:int) = 
+    async {
+        let queryString = """query getProgram($programId: Int!) {
+                Program(id: $programId) {
+                    slug
                     title
-                    id
                     description
-                    firstrun
-                    scope
-                    rating
-                    file_expires
-                    file
-                    clips {
-                        time
-                        text
-                        slug
-                    }
+                    foreign_title
+                    id
                     image
-                    subtitles {
-                        name
-                        value
+                    portrait_image
+                    episodes(limit: 250) {
+                        title
+                        id
+                        description
+                        firstrun
+                        scope
+                        rating
+                        file_expires
+                        file
+                        clips {
+                            time
+                            text
+                            slug
+                        }
+                        image
+                        subtitles {
+                            name
+                            value
+                        }
+                    }
+                    rest: episodes {
+                        title
+                        id
+                        firstrun
+                        description
+                        image
                     }
                 }
-                rest: episodes {
-                    title
-                    id
-                    firstrun
-                    description
-                    image
-                }
-            }
-        }"""
-    let variables = Map.empty
+            }"""
+        let variables = Map.empty
 
-    let query =
-        { operationName = null
-          query = queryString
-          variables = variables.Add("episodeId", programId) }
-    executeQuery query
+        let query =
+            { operationName = null
+              query = queryString
+              variables = {| programId = programId |} }
+        let! programContainer = executeQuery query programContainerDecoder
+        match programContainer with
+        | Ok(programContainer) ->
+            return Ok(programContainer.Program)
+        | Error(error) -> return Error(error)
+    }
