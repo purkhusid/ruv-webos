@@ -2,6 +2,7 @@
     "private": true,
     "scripts": {
         "start": "webpack-dev-server --mode development",
+        "start-emulator": "",
         "build": "webpack --mode production"
     },
     "dependencies": {

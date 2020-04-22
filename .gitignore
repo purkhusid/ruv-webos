@@ -200,3 +200,6 @@ main.js
 
 # webOS
 TV_logs
+
+# Output folder
+# dist
