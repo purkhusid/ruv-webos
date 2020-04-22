@@ -2,8 +2,8 @@
     "private": true,
     "scripts": {
         "start": "webpack-dev-server --mode development",
-        "start-emulator": "",
-        "build": "webpack --mode production"
+        "start-emulator": "yarn build && ares-package dist && ares-install com.github.purkhusid.ruv-webos_0.0.1_all.ipk && ares-launch com.github.purkhusid.ruv-webos",
+        "build": "rm -rf ./dist && webpack --mode production"
     },
     "dependencies": {
         "bulma": "0.8.0",
@@ -35,5 +35,5 @@
         "webpack-dev-server": "3.10.3",
         "webpack": "4.42.1"
     },
-    "version": "0.0.0"
+    "version": "0.0.1"
 }

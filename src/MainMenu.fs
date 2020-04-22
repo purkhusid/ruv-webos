@@ -162,12 +162,17 @@ let renderSlide program index dispatch =
         slide.children [ 
              Html.div [
                 prop.children [
-                    Html.img [
-                        prop.src program.image
-                        prop.width 399
-                        prop.height 225
+                    Html.a [
                         prop.onClick(fun _ -> dispatch (NavigateToProgram program.id))
+                        prop.children [
+                            Html.img [
+                                prop.src program.image
+                                prop.width 399
+                                prop.height 225
+                            ]
+                        ]
                     ]
+
                 ]
             ]
         ] 

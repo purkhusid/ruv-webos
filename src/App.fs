@@ -3,10 +3,7 @@ module App
 open Elmish
 open Elmish.React
 open Feliz
-open Fable.Core.JsInterop
 open Feliz.Router
-open Fable.Import.Browser
-
 
 [<RequireQualifiedAccess>]
 type Url =

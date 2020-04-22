@@ -31,18 +31,20 @@ type Program =
 type DeferredProgram = DeferredResult<Program>
 
 type State =
-    { Program: DeferredProgram 
+    { Program: DeferredProgram
+      Playing: Option<Episode>
       CurrentUrl: Url}
 
 type Msg =
     | LoadProgram of programId:int * AsyncOperationStatus<Result<Program, string>>
+    | PlayEpisode of Episode
 
 let init (url: Url) =
     match url with
     | Url.Index programId ->
-        { Program = HasNotStartedYet; CurrentUrl=url }, Cmd.ofMsg (LoadProgram (programId, Started))
+        { Program = HasNotStartedYet; Playing=None; CurrentUrl=url }, Cmd.ofMsg (LoadProgram (programId, Started))
     | Url.NotFound -> 
-        { Program = HasNotStartedYet; CurrentUrl=url }, Cmd.ofMsg (LoadProgram (0, Finished(Error "No programId in path")))
+        { Program = HasNotStartedYet;  Playing=None; CurrentUrl=url }, Cmd.ofMsg (LoadProgram (0, Finished(Error "No programId in path")))
 
 let startLoading (state: State) = { state with Program = InProgress }
 
@@ -86,6 +88,10 @@ let update (msg: Msg) (state: State) =
     | LoadProgram(programId, Finished(Error(error))) ->
         let nextState = { state with Program = Resolved(Error error) }
         nextState, Cmd.none
+    | PlayEpisode episode ->
+        let nextState = { state with Playing = Some(episode) }
+        nextState, Cmd.none
+
 
 let renderError (errorMsg: string) =
     Html.h1 [ 
@@ -108,22 +114,22 @@ let spinner =
         ] 
     ]
 
-let renderProgram (program: Program) =
-    Bulma.columns [
-        columns.isMultiline
+let renderEpisode episode dispatch =
+    Bulma.column [
+        column.isOneQuarter
         prop.children [
-            Bulma.column [
-                column.isOneQuarter
-                prop.children [
-                    Bulma.card [
-                        Bulma.cardImage [
-                            Bulma.image [
-                                image.is3by2
+            Bulma.card [
+                Bulma.cardImage [
+                    Bulma.image [
+                        image.is3by2
+                        prop.children [
+                            Html.a [
+                                prop.onClick(fun _ -> dispatch (PlayEpisode episode))
                                 prop.children [
                                     Html.img [
-                                        prop.src (program.episodes.[0].image.Replace("$$IMAGESIZE$$","1980"))
+                                        prop.src (episode.image.Replace("$$IMAGESIZE$$","1980"))
                                     ]
-                                ]
+                                ]                                
                             ]
                         ]
                     ]
@@ -131,103 +137,45 @@ let renderProgram (program: Program) =
             ]
         ]
     ]
-    // Html.div [
-    //     prop.children [
-    //         Bulma.tile [
-    //             tile.isAncestor
-    //             prop.children [
-    //                 Bulma.tile [
-    //                     prop.children [
-    //                         Bulma.box [
-    //                             prop.children [
-    //                                 Html.p [
-    //                                     prop.className "title"
-    //                                     prop.text "Yosafat"
-    //                                 ]
-    //                                 Html.p [
-    //                                     prop.text "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin ornare magna eros, eu pellentesque tortor vestibulum ut. Maecenas non massa sem. Etiam finibus odio quis feugiat facilisis."
-    //                                 ]
-    //                             ]
-    //                         ]
-    //                     ]
-    //                 ]
-    //                 Bulma.tile [
-    //                     prop.children [
-    //                         Bulma.box [
-    //                             prop.children [
-    //                                 Html.p [
-    //                                     prop.className "title"
-    //                                     prop.text "Yosafat2"
-    //                                 ]
-    //                                 Html.p [
-    //                                     prop.text "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin ornare magna eros, eu pellentesque tortor vestibulum ut. Maecenas non massa sem. Etiam finibus odio quis feugiat facilisis."
-    //                                 ]
-    //                             ]
-    //                         ]
-    //                     ]
-    //                 ]
-    //                 Bulma.tile [
-    //                     prop.children [
-    //                         Bulma.box [
-    //                             prop.children [
-    //                                 Html.p [
-    //                                     prop.className "title"
-    //                                     prop.text "Yosafat2"
-    //                                 ]
-    //                                 Html.p [
-    //                                     prop.text "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin ornare magna eros, eu pellentesque tortor vestibulum ut. Maecenas non massa sem. Etiam finibus odio quis feugiat facilisis."
-    //                                 ]
-    //                             ]
-    //                         ]
-    //                     ]
-    //                 ]
-    //                 Bulma.tile [
-    //                     prop.children [
-    //                         Bulma.box [
-    //                             prop.children [
-    //                                 Html.p [
-    //                                     prop.className "title"
-    //                                     prop.text "Yosafat2"
-    //                                 ]
-    //                                 Html.p [
-    //                                     prop.text "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin ornare magna eros, eu pellentesque tortor vestibulum ut. Maecenas non massa sem. Etiam finibus odio quis feugiat facilisis."
-    //                                 ]
-    //                             ]
-    //                         ]
-    //                     ]
-    //                 ]
-    //                 Bulma.tile [
-    //                     prop.children [
-    //                         Bulma.box [
-    //                             prop.children [
-    //                                 Html.p [
-    //                                     prop.className "title"
-    //                                     prop.text "Yosafat2"
-    //                                 ]
-    //                                 Html.p [
-    //                                     prop.text "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin ornare magna eros, eu pellentesque tortor vestibulum ut. Maecenas non massa sem. Etiam finibus odio quis feugiat facilisis."
-    //                                 ]
-    //                             ]
-    //                         ]
-    //                     ]
-    //                 ]
 
-    //             ]
-    //         ]
-    //     ]
-    // ]
+let renderProgram (program: Program) dispatch =
+    let episodes =
+        program.episodes
+        |> List.map (fun e -> renderEpisode e dispatch)
+    Bulma.columns [
+        columns.isMultiline
+        prop.children episodes
+    ]
 
-let renderDeferredProgram (program: DeferredProgram) =
+
+let renderDeferredProgram (program: DeferredProgram) dispatch=
     match program with
     | HasNotStartedYet -> Html.none
     | InProgress -> spinner
     | Resolved(Ok program) ->
-        renderProgram program
+        renderProgram program dispatch
     | Resolved(Error error) -> renderError error
 
 let render (state: State) (dispatch: Msg -> unit) =
-    Html.div [ 
-        prop.children [ 
-            renderDeferredProgram state.Program 
-        ] 
-    ]
+    match state.Playing with
+    | Some episode ->
+        Html.video [
+            prop.autoPlay true
+            prop.className "video-js"
+            prop.controls true
+            prop.preload.auto
+            prop.width 1920
+            prop.height 1080
+            prop.type' "application/x-mpegURL"
+            prop.children [
+                Html.source [
+                    prop.src episode.file
+                ]
+            ]
+        ]
+    | None ->   
+        Html.div [ 
+            prop.children [ 
+                renderDeferredProgram state.Program dispatch
+            ] 
+        ]

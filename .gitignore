@@ -200,6 +200,7 @@ main.js
 
 # webOS
 TV_logs
+com.github.purkhusid.*
 
 # Output folder
-# dist
+dist
