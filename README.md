@@ -7,9 +7,10 @@ It's a Work In Progress so do not expect it work very well at the moment!
 ## Current state
 
 * Super basic navigation and UI that lists all shows and episodes
-* Video playback (Does not start in fullscreen) on TVs
-* The video playback does not work in local dev because the RUV streams are HLS and
-most browsers don't support HLS
+  * Navigation via normal remote control does not work, only magic remote
+  * Scroll is broken
+* Video playback on TVs and local dev
+  * Emulator does not seem support video playback
 
 ## Developing
 
@@ -41,8 +42,13 @@ Follow these [instructions](http://webostv.developer.lge.com/develop/app-test/)
 
 ## TODO
 
-* Make video plaback start in fullscreen
-* Needs performance tuning in menus(Too many things being loaded)
-* Additional information about programs/episodes
 * Better navigation that works with mouse/magic remote and normal remote
+  * Fix scroll on TV
+  * Make naviation with normal remote work
+  * Make video player work with remote
+  * Make on video player exit got to program menu
+* Needs performance tuning
+  * The main menu is very sluggish on TVs
+  * The program menu is also sluggish
+* Additional information about programs/episodes
 * Beautiful UI

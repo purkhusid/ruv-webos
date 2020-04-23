@@ -4,6 +4,7 @@ open Elmish
 open Feliz
 open Feliz.Bulma
 open Feliz.Router
+open VideoJsPlayer
 
 [<RequireQualifiedAccess>]
 type Url =
@@ -159,20 +160,18 @@ let renderDeferredProgram (program: DeferredProgram) dispatch=
 let render (state: State) (dispatch: Msg -> unit) =
     match state.Playing with
     | Some episode ->
-        Html.video [
-            prop.autoPlay true
-            prop.className "video-js"
-            prop.controls true
-            prop.preload.auto
-            prop.width 1920
-            prop.height 1080
-            prop.type' "application/x-mpegURL"
-            prop.children [
-                Html.source [
-                    prop.src episode.file
-                ]
-            ]
-        ]
+        let source: VideoJS.Source =
+            { src = episode.file
+              ``type`` = "application/x-mpegURL" }
+        let options = 
+            { VideoJS.defaultOptions with 
+                  autoplay = true
+                  controls = true }
+        let props = 
+            { source = source
+              playerOptions = options }
+
+        videoJSPlayer props
     | None ->   
         Html.div [ 
             prop.children [ 

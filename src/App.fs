@@ -4,6 +4,9 @@ open Elmish
 open Elmish.React
 open Feliz
 open Feliz.Router
+open Fable.Core.JsInterop
+
+importSideEffects "video.js/dist/video-js.css"
 
 [<RequireQualifiedAccess>]
 type Url =
@@ -50,7 +53,8 @@ let update (msg: Msg) (state: State): State * Cmd<Msg> =
         | Url.ProgramMenu programId ->
             let (newState, cmd) = ProgramMenu.init programId
             { state with CurrentPage = Page.ProgramMenu newState }, Cmd.map ProgramMenuMsg cmd
-
+    | _, _ -> state, Cmd.none
+    
 let render (state: State) (dispatch: Msg -> unit) =
     let content =
         match state.CurrentPage with
@@ -63,10 +67,12 @@ let render (state: State) (dispatch: Msg -> unit) =
         Html.div [ 
             prop.style [ 
                 style.padding 20
-                // style.backgroundColor "#202020" 
-                style.backgroundColor "#FFF" 
+                style.backgroundColor "#202020"
+                style.custom ("width","100%")
+                style.custom ("height","100%")
+                style.position.fixedRelativeToWindow
             ]
-            prop.children [ 
+            prop.children [
                 content
             ] 
         ]

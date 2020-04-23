@@ -3,7 +3,9 @@
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="pure-react-carousel/PureReactCarousel.fs" />
+    <Compile Include="bindings/videojs/VideoJS.fs" />
+    <Compile Include="bindings/pure-react-carousel/PureReactCarousel.fs" />
+    <Compile Include="components/VideoJsPlayer.fs" />
     <Compile Include="Extensions.fs" />
     <Compile Include="Styles.fs" />
     <Compile Include="Api.fs" />
